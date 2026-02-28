@@ -26,7 +26,7 @@ for (m in 1:nrow(data)){
   
   #probability
   home_expected = 1/(1 + 10^((away_rating - (home_rating + 40))/400))
-  away_expected = 1/(1 + 10**(away_rating - (home_rating))/400)
+  away_expected = 1 - home_expected
   home_perf = 0.45 * (data[m,"home_goals"] - data[m,"away_goals"]) + 0.45 *(data[m,"home_xg"] - data[m,"away_xg"]) + 0.1 
   home_perf_score = 1/ (1+exp(-2 * home_perf))
   
@@ -96,21 +96,28 @@ model_2 <- xgboost(
   nrounds = 20,
   verbose = 0
 )
+result_matrix <- as.matrix(result_data[, "rating_diff", drop = FALSE])
 
-test = as.matrix(train_data[1000:1312, "rating_diff"], drop = FALSE) 
+test = as.matrix(train_data[1001:1312, "rating_diff", drop = FALSE]) 
 probs <- predict(model_2, newdata = test)
 predictions <- cut(probs, 
                  breaks = c(0, 0.5, 1.0), 
                  labels = c(0, 1))
-confusionMatrix(predictions, as.factor(train_data[1000:1312, "home_win"]))
-result_data$home_win = predict(model_2, newdata = result_data, type="response")
+confusionMatrix(predictions, as.factor(train_data[1001:1312, "home_win"]))
+
+result_data$home_win = predict(model_2, newdata = result_matrix)
 write.csv(result_data, file.path(temp_dir, "Win Probabilities (XG Boost).csv"))
 
 #logistic regression
 model <- glm(home_win ~ rating_diff, data = train_data[1:1000,], family = "binomial")
 summary(model)
-#predictions_2 <- predict(model, newdata = as.data.frame(test), type="response")
-#confusionMatrix(predictions_2, as.factor(train_data[1000:1312, "home_win"]))
+test_df <- train_data[1001:1312, , drop = FALSE]
+prob_2 <- predict(model, newdata = test_df, type="response")
+predictions_2 <- cut(prob_2, 
+                   breaks = c(-100, 0.5, 100), 
+                   labels = c(0, 1))
+confusionMatrix(predictions_2, as.factor(train_data[1001:1312, "home_win"]))
 
 result_data$home_win = predict(model, newdata = result_data, type="response")
 write.csv(result_data, file.path(temp_dir, "Win Probabilities (Logistic Regression).csv"))
+
