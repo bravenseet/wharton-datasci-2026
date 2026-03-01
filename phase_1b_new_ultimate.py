@@ -81,7 +81,7 @@ result = grouped.pivot(index="team", columns="line_cat", values="adj_xg").dropna
 # ----------------------------
 # We provide both: Raw Ratio for intuition, Log Ratio for ranking.
 result["disparity_ratio"] = result["First"] / result["Secondary"]
-result["disparity_log_ratio"] = np.log(result["disparity_ratio"])
+result["disparity_log_ratio"] = abs(np.log(result["disparity_ratio"]))
 
 # Rank from largest disparity to smallest
 result = result.sort_values("disparity_log_ratio", ascending=False)
